@@ -162,21 +162,21 @@ const currencies = [
 ];
 
 
-// ✅ Seeder function (only run once!)
-async function seedCurrencies() {
-    try {
-        const count = await Currency.countDocuments();
-        if (count === 0) {
-            await Currency.insertMany(currencies);
-            console.log('🌱 Seeded currencies collection');
-        } else {
-            console.log('⚠️ Currencies already exist, skipping seed');
-        }
-    } catch (err) {
-        console.error('Error seeding currencies:', err);
-    }
-}
-seedCurrencies();
+// // ✅ Seeder function (only run once!)
+// async function seedCurrencies() {
+//     try {
+//         const count = await Currency.countDocuments();
+//         if (count === 0) {
+//             await Currency.insertMany(currencies);
+//             console.log('🌱 Seeded currencies collection');
+//         } else {
+//             console.log('⚠️ Currencies already exist, skipping seed');
+//         }
+//     } catch (err) {
+//         console.error('Error seeding currencies:', err);
+//     }
+// }
+// seedCurrencies();
 
 // ✅ Routes
 app.get('/api/currencies', async (req, res) => {
