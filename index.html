@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fund Wallet</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root {
+            --ring: #2563eb;
+            --border: #d1d5db;
+            --muted: #6b7280;
+            --card-pad: 2rem 1.5rem;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+
+        body {
+            background-color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            padding: 20px;
+        }
+
+        .card {
+            max-width: 420px;
+            margin: auto;
+            padding: var(--card-pad);
+            background-color: #fff;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: visible;
+        }
+
+        /* On small screens, take full width */
+        @media (max-width: 600px) {
+            .card {
+                max-width: 100%;
+                box-shadow: none;
+                border: none;
+                border-radius: 0;
+                /* optional: edge-to-edge look */
+            }
+
+            html,
+            body {
+                padding: 0;
+                margin: 0;
+            }
+        }
+
+        .logo {
+            display: block;
+            margin: 0 auto 1.25rem;
+            width: 120px;
+        }
+
+        /* Notification container (top-right) */
+        #notificationContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 9999;
+        }
+
+        /* Each notification box */
+        .notification {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-left: 5px solid #28a745;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            font-size: 14px;
+            min-width: 220px;
+        }
+
+        /* Checkmark icon */
+        .notification .checkmark {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #28a745;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .notification .checkmark::after {
+            content: "✓";
+            color: #28a745;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+        }
+
+        /* Back icon (below the logo, left-aligned) */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #f3f4f6;
+            color: #9ca3af;
+            /* grey */
+            cursor: pointer;
+            margin: 0 0 1rem 0;
+            /* space below */
+        }
+
+        .back-btn:hover:not(:disabled) {
+            background: #e5e7eb;
+        }
+
+        .back-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            filter: grayscale(0.3);
+        }
+
+        /* Sections with smooth fade+slide */
+        .section {
+            display: none;
+            opacity: 0;
+            transform: translateX(24px);
+            transition: opacity .35s ease, transform .35s ease;
+        }
+
+        .section.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        h2 {
+            margin: 0 0 1rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        p {
+            margin: 0.5rem 0 1.5rem;
+            font-size: 0.95rem;
+            color: #6b7280;
+        }
+
+        /* Unified field width */
+        .field {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+
+        /* allow inputs to shrink inside grid columns (prevents overflow) */
+        .form-row .field {
+            min-width: 0;
+            width: 100%;
+        }
+
+        /* full width controls inside their column */
+        .dropdown,
+        .dropdown-btn {
+            width: 100%;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            /* was 94% */
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: .95rem;
+            outline: none;
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            /* stack on small screens */
+        }
+
+
+        input:focus {
+            border-color: var(--ring);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+        }
+
+        /* Currency list instead of grid */
+        .currency-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Currency card as a horizontal row */
+        .currency-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            /* text left, chevron right */
+            cursor: pointer;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+            user-select: none;
+        }
+
+        /* Left side (icon + text grouped) */
+        .currency-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .currency-info img {
+            width: 28px;
+            height: 28px;
+        }
+
+        .currency-info-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+
+        .currency-info-text span {
+            font-weight: 600;
+            font-size: .95rem;
+        }
+
+        .currency-info-text small {
+            color: var(--muted);
+            font-size: .8rem;
+        }
+
+        /* Chevron icon */
+        .currency-card::after {
+            content: "›";
+            /* right chevron */
+            font-size: 1.2rem;
+            color: #9ca3af;
+        }
+
+        /* Hover + active states */
+        .currency-card:hover {
+            background: #f8fafc;
+        }
+
+        .currency-card.active {
+            border-color: var(--ring);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+            background: #eff6ff;
+        }
+
+        /* Fancy custom dropdown */
+        .dropdown {
+            position: relative;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+        }
+
+        .dropdown-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-btn:hover {
+            border-color: rgb(37, 99, 235);
+            /* purple highlight */
+            box-shadow: 0 4px 10px rgba(124, 58, 237, 0.15);
+        }
+
+        .dropdown-btn .chev {
+            transition: transform 0.3s ease;
+        }
+
+        .dropdown-btn.active .chev {
+            transform: rotate(-180deg);
+        }
+
+        .dropdown-list {
+            position: absolute;
+            top: 110%;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .dropdown-list.show {
+            max-height: 400px;
+            /* enough to fit items */
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #f3f4f6;
+        }
+
+
+        .dropdown-item img {
+            width: 20px;
+            height: 20px;
+        }
+
+
+        .dropdown-item.selected {
+            background: #eff6ff;
+            outline: 2px solid rgba(37, 99, 235, .2);
+        }
+
+        /* Wallet info */
+        .wallet-info {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-bottom: 1.2rem;
+            text-align: center;
+        }
+
+        .wallet-info img {
+            max-width: 180px;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        }
+
+        .wallet-address {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: .5rem;
+            font-size: .9rem;
+            color: #2563eb;
+        }
+
+        .wallet-address span {
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 2px solid #2563eb;
+            border-radius: 18px;
+            padding: .45rem .8rem;
+            cursor: pointer;
+            font-size: .85rem;
+            font-weight: 600;
+            color: #2563eb;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            background: #000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            margin-top: .4rem;
+            position: relative;
+        }
+
+        .submit-btn:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+
+        /* Optional tiny progress bar (uses your markup) */
+        .progress {
+            height: 2px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            height: 10%;
+            width: 0;
+            background: #2563eb;
+            transition: width .3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Notification container (empty initially) -->
+    <div id="notificationContainer"></div>
+
+    <div class="card">
+        <!-- Logo -->
+        <img class="logo" src="./fairshake-logo.png" alt="Fairshake-logo" />
+        <!-- Back Icon (below logo, left) -->
+        <button type="button" class="back-btn" id="backBtn" onclick="goBack()" disabled aria-label="Go back">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+
+        <!-- Progress Bar (optional, keeps your markup) -->
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <form id="fundForm" autocomplete="off">
+            <!-- Section 1: Currency -->
+            <div class="section active" id="section1">
+                <h2>Select Currency</h2>
+                <div class="currency-grid" id="currencyGrid">
+                    <!-- Filled dynamically -->
+                </div>
+            </div>
+
+            <!-- Section 2: Network + Amount -->
+            <div class="section" id="section2">
+                <h2>Select Network & Amount</h2>
+                <div class="field">
+                    <div class="dropdown" id="networkDD">
+                        <div class="dropdown-btn" onclick="toggleDropdown('networkList')" aria-haspopup="listbox"
+                            aria-expanded="false">
+                            <span id="networkBtnLabel">Choose Network</span>
+                            <i class="fa-solid fa-chevron-down chev"></i>
+                        </div>
+                        <div id="networkList" class="dropdown-list" role="listbox">
+                            <!-- Example items -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <input id="amountInput" type="number" placeholder="Amount in USD" min="1" step="any" required />
+                </div>
+                <button type="button" class="submit-btn" id="toWalletBtn" onclick="asyncButton(this, goFromSection2)"
+                    disabled>
+                    Next
+                </button>
+            </div>
+
+            <!-- Section 3: Wallet Info -->
+            <!-- Section 3: Wallet Info -->
+            <div class="section" id="section3">
+                <h2>Payment Info</h2>
+                <p>Scan the QR code or copy and paste the payment details into your wallet.</p>
+
+                <!-- 🔹 Amount Section -->
+                <div id="amountSection" style="margin-bottom: 1rem;">
+                    <div
+                        style="font-size: 1.4rem; font-weight: 800; display:flex; align-items:center; justify-content:start; gap:.5rem;">
+                        <span id="convertedAmount">0.00</span>
+                        <button
+                            style="cursor:pointer; color:#374151; height: 30px; width: 30px; border: 2px solid #374151; border-radius: 50%; padding: 3px;"
+                            onclick="copyConverted()">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                    <div style="font-size: 0.9rem; font-weight: 800; color:#374151; margin-top:9px;" id="usdAmountText">
+                        0.00 USD
+                    </div>
+                    <div style="font-size: 0.85rem; font-weight: 800; color:#374151; margin-top:9px;"
+                        id="currencyNetwork">-</div>
+                </div>
+
+                <!-- 🔹 Loading Spinner (hidden by default) -->
+                <div id="loadingAmount" style="margin-bottom:1rem; display:none; text-align:start;">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.5rem; color:#2563eb;"></i>
+                </div>
+
+                <div class="wallet-info">
+
+                    <img id="walletQR" style="width: 100%;" src="" alt="QR Code" />
+
+
+                    <!-- 🔹 Address Section -->
+                    <div class="wallet-address">
+                        <span id="walletAddress"></span>
+                        <button type="button" class="copy-btn" onclick="copyAddress()">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="submit-btn" onclick="asyncButton(this, nextSection)">
+                    I have made payment
+                </button>
+            </div>
+
+
+            <!-- Section 4: User Details -->
+            <div class="section" id="section4">
+                <h2>Your Details</h2>
+                <div class="field"><input id="firstName" type="text" placeholder="First Name" required /></div>
+                <div class="field"><input id="lastName" type="text" placeholder="Last Name" required /></div>
+                <div class="field"><input id="email" type="email" placeholder="Email" required /></div>
+                <div class="field"><input id="occupation" type="text" placeholder="Occupation" required /></div>
+                <div class="field"><input id="employer" type="text" placeholder="Employer" required /></div>
+                <button type="submit" class="submit-btn">Complete donation</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+
+        function showNotification(message) {
+            const container = document.getElementById('notificationContainer');
+
+            // Prevent duplicates (only one notification at a time)
+            if (container.querySelector('.notification')) {
+                return;
+            }
+
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.innerHTML = `<div class="checkmark"></div><span>${message}</span>`;
+            container.appendChild(notif);
+
+            // Auto remove after animation (3s)
+            setTimeout(() => {
+                notif.remove();
+            }, 3000);
+        }
+
+        function copyConverted() {
+            const value = document.getElementById('convertedAmount').dataset.value;
+            navigator.clipboard.writeText(value).then(() => {
+                showNotification('Amount copied!');
+            });
+        }
+
+        function copyAddress() {
+            const addr = document.getElementById('walletAddress').dataset.full;
+            if (!addr) return;
+            navigator.clipboard.writeText(addr).then(() => {
+                showNotification('Address copied!');
+            });
+        }
+
+
+        /* ------- API Simulation ------- */
+        async function fetchCurrencies() {
+            // replace this with fetch('/api/currencies')
+            return new Promise(res => {
+                setTimeout(() => {
+                    res([
+                        {
+                            coin: 'btc',
+                            name: 'Bitcoin',
+                            icon: 'btc-icon.png',
+                            networks: [
+                                {
+                                    key: 'mainnet',
+                                    label: 'Mainnet',
+                                    icon: 'mainnet-icon.png',
+                                    address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+                                    qr: 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=bitcoin:1BoatSLRHtKNngkdXEeobR76b53LETtpyT'
+                                }
+                            ]
+                        },
+                        {
+                            coin: 'usdt',
+                            name: 'Tether',
+                            icon: 'usdt-icon.png',
+                            networks: [
+                                {
+                                    key: 'erc20',
+                                    label: 'ERC20',
+                                    icon: 'erc20-icon.png',
+                                    address: '0x1234567890abcdef1234567890abcdef12345678',
+                                    qr: 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=usdt:erc20:0x1234567890abcdef1234567890abcdef12345678'
+                                },
+                                {
+                                    key: 'trc20',
+                                    label: 'TRC20',
+                                    icon: 'trc20-icon.png',
+                                    address: 'TDNf9mXJGh4gmSTr1G5t5q1o8UG8wKZZq9',
+                                    qr: 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=usdt:trc20:TDNf9mXJGh4gmSTr1G5t5q1o8UG8wKZZq9'
+                                }
+                            ]
+                        }
+                    ]);
+                }, 600);
+            });
+        }
+
+
+        /* ------- State ------- */
+        let currencies = []; // full dataset from backend
+        let selectedCoin = null;
+        let selectedNetwork = null;
+
+        /* ------- UI helpers ------- */
+        function markCurrencyActive(coin) {
+            document.querySelectorAll('.currency-card').forEach(c => {
+                c.classList.toggle('active', c.dataset.coin === coin);
+            });
+        }
+
+
+        /* ------- Helpers ------- */
+        function closeAllDropdowns(exceptId) {
+            document.querySelectorAll('.dropdown-list.show').forEach(dl => {
+                if (!exceptId || dl.id !== exceptId) dl.classList.remove('show');
+            });
+            document.querySelectorAll('.dropdown-btn[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+        }
+
+        document.addEventListener('click', (e) => {
+            const dd = e.target.closest('.dropdown');
+            if (!dd) closeAllDropdowns();
+        });
+
+        // Toggle open/close
+        function toggleDropdown(id) {
+            const list = document.getElementById(id);
+            const btn = list.previousElementSibling;
+
+            const showing = list.classList.toggle("show");
+            btn.classList.toggle("active", showing);
+            btn.setAttribute("aria-expanded", String(showing));
+
+            // Close other dropdowns
+            document.querySelectorAll(".dropdown-list").forEach(dd => {
+                if (dd !== list) {
+                    dd.classList.remove("show");
+                    dd.previousElementSibling.classList.remove("active");
+                    dd.previousElementSibling.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+
+        // Click outside closes
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".dropdown")) {
+                document.querySelectorAll(".dropdown-list").forEach(dd => {
+                    dd.classList.remove("show");
+                    dd.previousElementSibling.classList.remove("active");
+                    dd.previousElementSibling.setAttribute("aria-expanded", "false");
+                });
+            }
+        });
+
+        // ✅ Event delegation: works for dynamically-added items
+        document.getElementById("networkList").addEventListener("click", (e) => {
+            const item = e.target.closest(".dropdown-item");
+            if (!item) return;
+
+            const dropdown = item.closest(".dropdown");
+            const btn = dropdown.querySelector(".dropdown-btn");
+            const label = dropdown.querySelector("#networkBtnLabel");
+            const list = dropdown.querySelector(".dropdown-list");
+
+            // Update label to selected item (keeps FA icon)
+            label.innerHTML = item.innerHTML;
+
+            // Close + reset chevron
+            list.classList.remove("show");
+            btn.classList.remove("active");
+            btn.setAttribute("aria-expanded", "false");
+        });
+
+
+
+        function buildNetworkOptions(networks) {
+            const list = document.getElementById('networkList');
+            list.innerHTML = '';
+
+            networks.forEach(net => {
+                const row = document.createElement('div');
+                row.className = 'dropdown-item';
+                row.setAttribute('role', 'option');
+                row.onclick = () => chooseNetwork(net);
+
+                row.innerHTML = `<img src="${net.icon}" alt="${net.label}"> <span>${net.label}</span>`;
+                list.appendChild(row);
+            });
+        }
+
+
+        /* ------- Main actions ------- */
+        function chooseCoin(coinKey) {
+            selectedCoin = currencies.find(c => c.coin === coinKey);
+            if (!selectedCoin) return;
+
+            markCurrencyActive(coinKey);
+            buildNetworkOptions(selectedCoin.networks);
+
+            // Reset network UI
+            selectedNetwork = null;
+            document.getElementById('networkBtnLabel').textContent = 'Choose Network';
+            document.getElementById('toWalletBtn').disabled = true;
+
+            goToSection(2);
+        }
+
+        function chooseNetwork(net) {
+            selectedNetwork = net;
+
+            // Mark selected row
+            document.querySelectorAll('#networkList .dropdown-item').forEach(i => {
+                i.classList.toggle('selected', i.textContent.trim() === net.label);
+            });
+
+            // Update button label and close
+            document.getElementById('networkBtnLabel').textContent = net.label;
+            closeAllDropdowns();
+
+            validateSection2();
+        }
+
+        // CoinGecko fallback mapping
+        const coinGeckoIds = {
+            sol: "solana",
+            usdt: "tether",
+            usdc: "usd-coin",
+            btc: "bitcoin",
+            eth: "ethereum"
+        };
+
+        async function showWalletInfo() {
+            if (!selectedCoin || !selectedNetwork) return;
+            document.getElementById('walletQR').src = selectedNetwork.qr;
+
+            // Wallet address
+            const full = selectedNetwork.address;
+            const masked = full.slice(0, 6) + '...' + full.slice(-4);
+            const addrEl = document.getElementById('walletAddress');
+            addrEl.textContent = masked;
+            addrEl.dataset.full = full;
+
+            // 🔹 Amount input (USD)
+            const usd = Number(document.getElementById('amountInput').value);
+            if (!usd || usd <= 0) return;
+
+            // Show loader
+            document.getElementById("amountSection").style.display = "none";
+            document.getElementById("loadingAmount").style.display = "block";
+
+            // 🔹 Determine CoinGecko ID
+            let coinId = selectedCoin.coin.toLowerCase();
+            let rate = null;
+
+            try {
+                let res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
+                let data = await res.json();
+
+                if (data[coinId] && data[coinId].usd) {
+                    rate = data[coinId].usd;
+                } else if (coinGeckoIds[coinId]) {
+                    // fallback mapping
+                    const mappedId = coinGeckoIds[coinId];
+                    res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${mappedId}&vs_currencies=usd`);
+                    data = await res.json();
+                    if (data[mappedId] && data[mappedId].usd) {
+                        rate = data[mappedId].usd;
+                        coinId = mappedId;
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching rate:", err);
+            }
+
+            if (!rate) {
+                console.error("Rate not found for", coinId);
+                document.getElementById("loadingAmount").style.display = "none";
+                return;
+            }
+
+            // 🔹 Conversion
+            const converted = (usd / rate).toFixed(6);
+
+            // Update UI
+            const convertedEl = document.getElementById('convertedAmount');
+            convertedEl.textContent = `${converted} ${selectedCoin.coin.toUpperCase()}`;
+            convertedEl.dataset.value = converted; // store raw number for copy
+
+            document.getElementById('usdAmountText').textContent = `${usd} USD`;
+            document.getElementById('currencyNetwork').textContent =
+                `${selectedCoin.coin.toUpperCase()} · ${selectedNetwork.label}`;
+
+            // Hide loader, show content
+            document.getElementById("loadingAmount").style.display = "none";
+            document.getElementById("amountSection").style.display = "block";
+        }
+
+
+
+
+
+
+
+        function validateSection2() {
+            const amt = document.getElementById('amountInput').value;
+            document.getElementById('toWalletBtn').disabled = !(selectedNetwork && amt && Number(amt) > 0);
+        }
+
+        function goFromSection2() {
+            const amount = document.getElementById('amountInput').value;
+            showWalletInfo(selectedCoin, selectedNetwork, amount);
+            nextSection();
+        }
+
+
+        function nextSection() {
+            const active = document.querySelector('.section.active');
+            const next = active?.nextElementSibling;
+            if (!next) return;
+            active.classList.remove('active');
+            next.classList.add('active');
+            updateNavUI();
+        }
+
+        function goBack() {
+            const active = document.querySelector('.section.active');
+            const prev = active?.previousElementSibling;
+            if (!prev) return;
+            active.classList.remove('active');
+            prev.classList.add('active');
+            updateNavUI();
+        }
+
+        function goToSection(num) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section' + num).classList.add('active');
+            updateNavUI();
+        }
+
+        function updateNavUI() {
+            // Back icon disabled on first section
+            const isFirst = document.getElementById('section1').classList.contains('active');
+            document.getElementById('backBtn').disabled = isFirst;
+
+            // Progress bar (optional)
+            const sections = Array.from(document.querySelectorAll('.section'));
+            const idx = sections.findIndex(s => s.classList.contains('active'));
+            const pct = ((idx + 1) / sections.length) * 100;
+            document.getElementById('progressBar').style.width = pct + '%';
+        }
+
+        // Loading wrapper: replace clicked button text with FA spinner for >= 2s
+        function asyncButton(btnEl, action, delay = 2000) {
+            if (!btnEl || typeof action !== 'function') return;
+            const original = btnEl.innerHTML;
+            btnEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+            const prevDisabled = btnEl.disabled;
+            btnEl.disabled = true;
+
+            setTimeout(() => {
+                try { action(); } finally {
+                    btnEl.innerHTML = original;
+                    btnEl.disabled = prevDisabled;
+                }
+            }, delay);
+        }
+
+        // Amount input validation wiring
+        document.getElementById('amountInput').addEventListener('input', validateSection2);
+
+        /* ------- Init ------- */
+        fetchCurrencies().then(data => {
+            currencies = data; // store in state
+            const grid = document.getElementById("currencyGrid");
+
+            data.forEach(c => {
+                const div = document.createElement("div");
+                div.className = "currency-card";
+                div.dataset.coin = c.coin;
+                div.onclick = () => chooseCoin(c.coin);
+
+                div.innerHTML = `
+            <div class="currency-info">
+                <img src="${c.icon}" alt="${c.coin}" />
+                <div class="currency-info-text">
+                    <span>${c.name}</span>
+                    <small>${c.coin.toUpperCase()}</small>
+                </div>
+            </div>
+        `;
+
+                grid.appendChild(div);
+            });
+        });
+
+
+        // Close dropdowns when pressing Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAllDropdowns();
+        });
+
+        // Prevent form navigation; final submit
+        document.getElementById('fundForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = {
+                coin: selectedCoin?.coin,
+                network: selectedNetwork?.label,
+                address: selectedNetwork?.address,
+                amountUSD: Number(document.getElementById('amountInput').value),
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                occupation: document.getElementById('occupation').value,
+                employer: document.getElementById('employer').value
+            };
+
+            // 🔹 Send to backend
+            const res = await fetch('/api/donation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert('Donation completed. Thank you!');
+            } else {
+                alert('Something went wrong.');
+            }
+        });
+
+
+        // Initial UI state
+        updateNavUI();
+    </script>
+</body>
+
+</html>
