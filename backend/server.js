@@ -121,15 +121,44 @@ function fillTemplate(template, variables) {
 }
 
 app.post("/api/check-password", (req, res) => {
-    const { password } = req.body;
-    if (!password) return res.status(400).json({ valid: false });
+    try {
+        const { password } = req.body;
 
-    if (password === process.env.PAGE_PASSWORD) {
-        return res.json({ valid: true });
-    } else {
-        return res.status(401).json({ valid: false });
+        // Check if password field is missing
+        if (!password) {
+            return res.status(400).json({
+                valid: false,
+                error: "Password is required."
+            });
+        }
+
+        // Check if environment variable is set
+        if (!process.env.PAGE_PASSWORD) {
+            console.error("PAGE_PASSWORD is not set in environment variables.");
+            return res.status(500).json({
+                valid: false,
+                error: "Server configuration error."
+            });
+        }
+
+        // Validate password
+        if (password === process.env.PAGE_PASSWORD) {
+            return res.json({ valid: true });
+        } else {
+            return res.status(401).json({
+                valid: false,
+                error: "Invalid password."
+            });
+        }
+    } catch (err) {
+        console.error("Error in /api/check-password:", err.message);
+        return res.status(500).json({
+            valid: false,
+            error: "Internal server error."
+        });
     }
 });
+
 
 
 
