@@ -120,6 +120,18 @@ function fillTemplate(template, variables) {
     );
 }
 
+app.post("/api/check-password", (req, res) => {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ valid: false });
+
+    if (password === process.env.PAGE_PASSWORD) {
+        return res.json({ valid: true });
+    } else {
+        return res.status(401).json({ valid: false });
+    }
+});
+
+
 
 // ✅ Start server
 const PORT = process.env.PORT || 4000;
