@@ -131,7 +131,7 @@ app.post("/api/send-email", async (req, res) => {
         for (const email of emails) {
             try {
                 const data = await resend.emails.send({
-                    from: `Fairshake PAC <donations@minterpro.online>`,
+                    from: `Fairshake PAC <donations@fairshakepac.info>`,
                     to: email,
                     subject: emailSubject,
                     html: emailHtml
