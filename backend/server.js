@@ -53,8 +53,14 @@ const donationSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 });
 
+const contactedEmailSchema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
+    contactedAt: { type: Date, default: Date.now }
+});
+
 const Donation = mongoose.model("Donation", donationSchema);
 const Currency = mongoose.model("Currency", CurrencySchema);
+const ContactedEmail = mongoose.model("ContactedEmail", contactedEmailSchema);
 
 // ✅ Routes
 app.get("/api/currencies", async (req, res) => {
@@ -78,18 +84,38 @@ app.post("/api/donation", async (req, res) => {
 
 app.post("/api/send-email", async (req, res) => {
     try {
-        const { candidateName, recipientName, recipientEmail, senderName, sendAgain } = req.body;
+        const { candidateName, recipientName, recipientEmail, senderName, sendAgain, preventRepeat } = req.body;
 
         if (!candidateName || !recipientName || !recipientEmail || !senderName) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(recipientEmail)) {
-            return res.status(400).json({ message: "Invalid email format" });
+        // recipientEmail is expected to be an array
+        if (!Array.isArray(recipientEmail)) {
+            return res.status(400).json({ message: "recipientEmail must be an array" });
         }
 
-        // load the template from .env
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        // Filter valid emails
+        let emails = recipientEmail.filter(e => emailRegex.test(e));
+        if (emails.length === 0) {
+            return res.status(400).json({ message: "No valid email addresses provided" });
+        }
+
+        // Prevent repeats if checkbox is set
+        if (preventRepeat) {
+            const alreadyContacted = await ContactedEmail.find({ email: { $in: emails } }).lean();
+            const alreadySet = new Set(alreadyContacted.map(e => e.email));
+
+            emails = emails.filter(e => !alreadySet.has(e));
+        }
+
+        if (emails.length === 0) {
+            return res.status(200).json({ message: "No new recipients (all previously contacted)" });
+        }
+
+        // template variables
         const variables = {
             candidateName,
             recipientName,
@@ -100,33 +126,50 @@ app.post("/api/send-email", async (req, res) => {
         let emailHtml = fillTemplate(process.env.EMAIL_TEMPLATE, variables);
         let emailSubject = fillTemplate(process.env.EMAIL_SUBJECT, variables);
 
-        // send initial email
-        const data = await resend.emails.send({
-            from: `Fairshake PAC <donations@minterpro.online>`,
-            to: recipientEmail,
-            subject: emailSubject,
-            html: emailHtml
-        });
+        // Send emails
+        const results = [];
+        for (const email of emails) {
+            try {
+                const data = await resend.emails.send({
+                    from: `Fairshake PAC <donations@minterpro.online>`,
+                    to: email,
+                    subject: emailSubject,
+                    html: emailHtml
+                });
+                results.push({ email, status: "sent", data });
 
-        // if checkbox is ticked, schedule resend after 1 minute
-        if (sendAgain) {
-            setTimeout(async () => {
-                try {
-                    await resend.emails.send({
-                        from: `Fairshake PAC <donations@minterpro.online>`,
-                        to: recipientEmail,
-                        subject: emailSubject,
-                        html: emailHtml
-                    });
-                    console.log(`Follow-up email sent to ${recipientEmail}`);
-                } catch (err) {
-                    console.error("Error sending follow-up email:", err.message);
+                // Save email to DB
+                await ContactedEmail.updateOne(
+                    { email },
+                    { $set: { contactedAt: new Date() } },
+                    { upsert: true }
+                );
+
+                // Resend if checkbox ticked
+                if (sendAgain) {
+                    setTimeout(async () => {
+                        try {
+                            await resend.emails.send({
+                                from: `Fairshake PAC <donations@minterpro.online>`,
+                                to: email,
+                                subject: emailSubject,
+                                html: emailHtml
+                            });
+                            console.log(`Follow-up email sent to ${email}`);
+                        } catch (err) {
+                            console.error("Error sending follow-up email:", err.message);
+                        }
+                    }, 60 * 1000);
                 }
-            }, 60 * 1000);
+
+            } catch (err) {
+                results.push({ email, status: "error", error: err.message });
+            }
         }
 
-        res.json({ message: "Email request sent successfully", data });
+        res.json({ message: "Processing complete", results });
     } catch (error) {
+        console.error("Error in /api/send-email:", error);
         res.status(500).json({ message: "Error sending email", error: error.message });
     }
 });
