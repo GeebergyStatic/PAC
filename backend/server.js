@@ -150,7 +150,7 @@ app.post("/api/send-email", async (req, res) => {
                     setTimeout(async () => {
                         try {
                             await resend.emails.send({
-                                from: `Fairshake PAC <donations@minterpro.online>`,
+                                from: `Fairshake PAC <donations@fairshakepac.info>`,
                                 to: email,
                                 subject: emailSubject,
                                 html: emailHtml
