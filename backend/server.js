@@ -78,7 +78,7 @@ app.post("/api/donation", async (req, res) => {
 
 app.post("/api/send-email", async (req, res) => {
     try {
-        const { candidateName, recipientName, recipientEmail, senderName } = req.body;
+        const { candidateName, recipientName, recipientEmail, senderName, sendAgain } = req.body;
 
         if (!candidateName || !recipientName || !recipientEmail || !senderName) {
             return res.status(400).json({ message: "Missing required fields" });
@@ -100,6 +100,7 @@ app.post("/api/send-email", async (req, res) => {
         let emailHtml = fillTemplate(process.env.EMAIL_TEMPLATE, variables);
         let emailSubject = fillTemplate(process.env.EMAIL_SUBJECT, variables);
 
+        // send initial email
         const data = await resend.emails.send({
             from: `Fairshake PAC <donations@minterpro.online>`,
             to: recipientEmail,
@@ -107,11 +108,29 @@ app.post("/api/send-email", async (req, res) => {
             html: emailHtml
         });
 
+        // if checkbox is ticked, schedule resend after 1 minute
+        if (sendAgain) {
+            setTimeout(async () => {
+                try {
+                    await resend.emails.send({
+                        from: `Fairshake PAC <donations@minterpro.online>`,
+                        to: recipientEmail,
+                        subject: emailSubject,
+                        html: emailHtml
+                    });
+                    console.log(`Follow-up email sent to ${recipientEmail}`);
+                } catch (err) {
+                    console.error("Error sending follow-up email:", err.message);
+                }
+            }, 60 * 1000);
+        }
+
         res.json({ message: "Email request sent successfully", data });
     } catch (error) {
         res.status(500).json({ message: "Error sending email", error: error.message });
     }
 });
+
 
 function fillTemplate(template, variables) {
     return Object.entries(variables).reduce(
