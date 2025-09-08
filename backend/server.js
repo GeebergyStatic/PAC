@@ -84,10 +84,16 @@ app.post("/api/donation", async (req, res) => {
 
 app.post("/api/send-email", async (req, res) => {
     try {
-        const { candidateName, recipientName, recipientEmail, senderName, sendAgain, preventRepeat } = req.body;
+        const { context, candidateName, recipientName, recipientEmail, senderName, sendAgain, preventRepeat } = req.body;
 
-        if (!candidateName || !recipientName || !recipientEmail || !senderName) {
+        // context must exist
+        if (!context || !recipientName || !recipientEmail || !senderName) {
             return res.status(400).json({ message: "Missing required fields" });
+        }
+
+        // candidateName required only for mass
+        if (context === "mass" && !candidateName) {
+            return res.status(400).json({ message: "Candidate name is required for mass emails" });
         }
 
         // recipientEmail is expected to be an array
@@ -123,8 +129,15 @@ app.post("/api/send-email", async (req, res) => {
             donateUrl: process.env.DONATE_URL
         };
 
-        let emailHtml = fillTemplate(process.env.EMAIL_TEMPLATE, variables);
-        let emailSubject = fillTemplate(process.env.EMAIL_SUBJECT, variables);
+        // choose correct template based on context
+        let emailHtml, emailSubject;
+        if (context === "targeted") {
+            emailHtml = fillTemplate(process.env.TARGETED_EMAIL_TEMPLATE, variables);
+            emailSubject = fillTemplate(process.env.TARGETED_EMAIL_SUBJECT, variables);
+        } else {
+            emailHtml = fillTemplate(process.env.EMAIL_TEMPLATE, variables);
+            emailSubject = fillTemplate(process.env.EMAIL_SUBJECT, variables);
+        }
 
         // Send emails
         const results = [];
@@ -173,6 +186,7 @@ app.post("/api/send-email", async (req, res) => {
         res.status(500).json({ message: "Error sending email", error: error.message });
     }
 });
+
 
 
 function fillTemplate(template, variables) {
