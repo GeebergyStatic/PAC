@@ -134,6 +134,10 @@ app.post("/api/send-email", async (req, res) => {
         if (context === "targeted") {
             emailHtml = fillTemplate(process.env.TARGETED_EMAIL_TEMPLATE, variables);
             emailSubject = fillTemplate(process.env.TARGETED_EMAIL_SUBJECT, variables);
+        }
+        else if (context === "trumpDonation") {
+            emailHtml = fillTemplate(process.env.TRUMP_DONATION_EMAIL_TEMPLATE, variables);
+            emailSubject = fillTemplate(process.env.TRUMP_DONATION_EMAIL_SUBJECT, variables);
         } else {
             emailHtml = fillTemplate(process.env.EMAIL_TEMPLATE, variables);
             emailSubject = fillTemplate(process.env.EMAIL_SUBJECT, variables);
